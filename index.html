@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monk Planner</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #1a1814;
+      --surface:   #22201c;
+      --surface2:  #272420;
+      --border:    #2e2b26;
+      --muted:     #7a7268;
+      --text:      #e8e0d0;
+      --accent:    #c4a47a;
+      --highlight: #f0c880;
+      --danger:    #b05555;
+      --radius:    6px;
+      --font:      'Georgia', serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-weight: 700;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ─────────────────────────────── */
+    header {
+      flex-shrink: 0;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+    }
+    .temple-icon {
+      flex-shrink: 0;
+      opacity: 0.9;
+      filter: drop-shadow(0 0 6px #f0c88055);
+    }
+
+    header h1 {
+      font-size: 1rem;
+      font-weight: 900;
+      letter-spacing: 0.22em;
+      color: var(--highlight);
+      text-transform: uppercase;
+    }
+    header span {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Layout ─────────────────────────────── */
+    .layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Left sidebar — title list ──────────── */
+    .sidebar-left {
+      width: 210px;
+      min-width: 210px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sidebar-left-top {
+      padding: 16px 12px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .new-title-btn {
+      width: 100%;
+      background: none;
+      border: 1px dashed var(--muted);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 0.82rem;
+      font-weight: 700;
+      padding: 7px 10px;
+      cursor: pointer;
+      text-align: left;
+      letter-spacing: 0.04em;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .new-title-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .title-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .title-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: var(--radius);
+      padding: 7px 8px;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .title-item:hover { background: var(--surface2); }
+    .title-item.active { background: var(--border); }
+
+
+    .title-item-icon {
+      font-size: 0.75rem;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+    .title-item-name {
+      flex: 1;
+      font-size: 0.87rem;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .title-item.active .title-item-name { color: var(--highlight); }
+
+    .title-item-del {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.7rem;
+      opacity: 0;
+      padding: 0 2px;
+      transition: opacity 0.12s, color 0.12s;
+      flex-shrink: 0;
+    }
+    .title-item:hover .title-item-del { opacity: 1; }
+    .title-item-del:hover { color: var(--danger); }
+
+    /* ── Main — todo area ───────────────────── */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .main-inner {
+      flex: 1;
+      padding: 36px 48px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 0.85rem;
+      letter-spacing: 0.06em;
+      text-align: center;
+      padding: 60px 20px;
+    }
+    .empty-state .big { font-size: 2rem; opacity: 0.3; }
+
+    /* active section title (read-only display in main) */
+    .title-row {
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 14px;
+    }
+    .active-title {
+      font-size: 1.6rem;
+      color: var(--highlight);
+      font-weight: normal;
+      letter-spacing: 0.02em;
+      outline: none;
+      flex: 1;
+    }
+    .title-created-date {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--muted);
+      white-space: nowrap;
+      flex-shrink: 0;
+      letter-spacing: 0.03em;
+    }
+
+    /* ── Todo list ──────────────────────────── */
+    .todo-list { display: flex; flex-direction: column; gap: 2px; }
+
+    .todo-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 5px 0;
+      flex-wrap: wrap;
+    }
+
+    .todo-date {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+      flex-shrink: 0;
+      opacity: 0.85;
+    }
+    .todo-date.today { color: var(--highlight); }
+    .todo-date.past  { color: var(--muted); }
+
+    .todo-check {
+      width: 18px; height: 18px;
+      border-radius: 4px;
+      border: 1.5px solid var(--accent);
+      background: none;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .todo-check.checked { background: var(--accent); border-color: var(--accent); }
+    .todo-check.checked::after { content: '✓'; font-size: 0.7rem; color: var(--bg); }
+
+    .todo-text {
+      flex: 1;
+      background: none; border: none;
+      border-bottom: 1px solid transparent;
+      color: var(--text);
+      font-family: var(--font); font-size: 1rem; font-weight: 700;
+      outline: none; padding: 2px 0;
+      transition: border-color 0.15s, color 0.15s, text-decoration 0.15s;
+    }
+    .todo-text:focus { border-bottom-color: var(--border); }
+    .todo-text::placeholder { color: var(--muted); }
+    .todo-text.done { text-decoration: line-through; color: var(--muted); }
+
+    .todo-del {
+      background: none; border: none;
+      color: var(--muted); cursor: pointer;
+      font-size: 0.72rem; opacity: 0; padding: 0 2px;
+      transition: opacity 0.12s, color 0.12s; flex-shrink: 0;
+    }
+    .todo-item:hover .todo-del { opacity: 1; }
+    .todo-del:hover { color: var(--danger); }
+
+    /* ── Sidebar folder (başlık klasörü) ─────── */
+    .sf-folder { display: flex; flex-direction: column; gap: 1px; }
+
+    .sf-folder-header {
+      display: flex; align-items: center; gap: 6px;
+      border-radius: var(--radius);
+      padding: 6px 8px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.12s;
+    }
+    .sf-folder-header:hover { background: var(--surface2); }
+    .sf-folder-header.drag-over { background: #2e2b26; outline: 1px solid var(--highlight); border-radius: 6px; }
+
+    .sf-arrow {
+      font-size: 0.55rem; color: var(--muted);
+      transition: transform 0.18s; flex-shrink: 0;
+    }
+    .sf-arrow.open { transform: rotate(90deg); }
+
+    .sf-folder-name {
+      flex: 1; min-width: 0;
+      background: none; border: none;
+      border-bottom: 1px solid transparent;
+      color: var(--highlight);
+      font-family: var(--font); font-size: 0.82rem; font-weight: 700;
+      outline: none; cursor: text; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .sf-folder-name:focus { border-bottom-color: var(--accent); white-space: normal; text-overflow: unset; }
+    .sf-folder-name::placeholder { color: var(--muted); }
+
+    .sf-folder-count { font-size: 0.62rem; font-weight: 700; color: var(--muted); flex-shrink: 0; }
+
+    .sf-folder-del {
+      background: none; border: none;
+      color: var(--muted); cursor: pointer;
+      font-size: 0.68rem; opacity: 0; padding: 0 2px;
+      transition: opacity 0.12s, color 0.12s; flex-shrink: 0;
+    }
+    .sf-folder-header:hover .sf-folder-del { opacity: 1; }
+    .sf-folder-del:hover { color: var(--danger); }
+
+    .sf-folder-body {
+      display: flex; flex-direction: column; gap: 1px;
+      padding-left: 14px;
+      border-left: 1px solid var(--border);
+      margin-left: 12px;
+    }
+    .sf-folder-body.hidden { display: none; }
+
+    .title-item.drag-over { background: #2e2b26; outline: 1px solid var(--accent); }
+    .title-item.dragging  { opacity: 0.35; }
+
+    .add-todo-btn {
+      align-self: flex-start;
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-family: var(--font);
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 6px 0 6px 30px;
+      transition: color 0.15s;
+      letter-spacing: 0.03em;
+    }
+    .add-todo-btn:hover { color: var(--accent); }
+
+    /* ── Right sidebar — habit tracker ──────── */
+    .sidebar-right {
+      width: 248px;
+      min-width: 248px;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 20px 14px;
+      gap: 16px;
+      overflow-y: auto;
+    }
+
+    .sidebar-right h2 {
+      font-size: 0.72rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 900;
+    }
+
+    .habit-form {
+      display: flex;
+      gap: 6px;
+    }
+    .habit-form input {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 0.8rem;
+      padding: 6px 8px;
+      outline: none;
+      min-width: 0;
+    }
+    .habit-form input:focus { border-color: var(--accent); }
+    .habit-form button {
+      background: none;
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
+      color: var(--accent);
+      font-size: 1rem;
+      width: 28px;
+      flex-shrink: 0;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .habit-form button:hover { background: var(--accent); color: var(--bg); }
+
+    .week-header {
+      display: flex;
+      gap: 4px;
+      padding-left: 0;
+    }
+    .week-header span {
+      width: 24px;
+      text-align: center;
+      font-size: 0.55rem;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    .habits-list { display: flex; flex-direction: column; gap: 12px; }
+
+    .habit-item { display: flex; flex-direction: column; gap: 5px; }
+
+    .habit-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .habit-name { font-size: 0.85rem; font-weight: 700; color: var(--text); }
+    .habit-del {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.7rem;
+      opacity: 0;
+      transition: opacity 0.12s, color 0.12s;
+    }
+    .habit-item:hover .habit-del { opacity: 1; }
+    .habit-del:hover { color: var(--danger); }
+
+    .habit-days { display: flex; gap: 4px; }
+
+    .day-dot {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .day-dot.done {
+      background: var(--highlight);
+      border-color: var(--highlight);
+    }
+    .day-dot.today {
+      border-color: var(--accent);
+    }
+
+    /* ── Light theme ─────────────────────────── */
+    body.light {
+      --bg:        #f5f0e8;
+      --surface:   #ede8df;
+      --surface2:  #e5dfd5;
+      --border:    #d5cec3;
+      --muted:     #8c8070;
+      --text:      #3a3228;
+      --accent:    #8b6940;
+      --highlight: #7a5525;
+      --danger:    #9b3a3a;
+    }
+
+    /* ── Theme button ────────────────────────── */
+    .theme-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--muted);
+      width: 34px; height: 34px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0; font-size: 1rem;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Sidebar divider ─────────────────────── */
+    .sb-divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+    /* ── Stats panel ─────────────────────────── */
+    .stats-panel { display: flex; flex-direction: column; gap: 7px; }
+    .stat-row {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.78rem; font-weight: 700; color: var(--muted);
+    }
+    .stat-val { color: var(--highlight); font-size: 0.92rem; }
+
+
+    /* ── Free-write ──────────────────────────── */
+    .freewrite-label {
+      font-size: 0.63rem; font-weight: 700;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--muted); margin-top: 4px;
+    }
+    .freewrite {
+      width: 100%; min-height: 110px;
+      background: none; border: none;
+      border-top: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font); font-size: 0.92rem; font-weight: 700;
+      line-height: 1.75; padding: 14px 0;
+      resize: vertical; outline: none;
+      transition: border-color 0.15s;
+    }
+    .freewrite::placeholder { color: var(--muted); }
+
+    /* ── Scrollbars ──────────────────────────── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* ── Pomodoro ─────────────────────────────── */
+    .pomo-btn {
+      margin-left: auto;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--muted);
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .pomo-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .pomo-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 100;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+    }
+    .pomo-overlay.open { display: flex; }
+
+    .pomo-close {
+      position: absolute;
+      top: 22px; right: 28px;
+      background: none; border: none;
+      color: var(--muted); font-size: 1.1rem;
+      cursor: pointer; transition: color 0.15s;
+    }
+    .pomo-close:hover { color: var(--text); }
+
+    .pomo-monk {
+      width: 250px;
+      height: 250px;
+      object-fit: contain;
+      opacity: 0.82;
+      margin-bottom: 28px;
+      filter: sepia(1) saturate(0.5) brightness(0.85);
+    }
+
+    .pomo-mode {
+      display: flex;
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+    .pomo-mode button {
+      background: none; border: none;
+      font-family: var(--font); font-size: 0.72rem; font-weight: 700;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--muted); cursor: pointer;
+      padding: 4px 0;
+      border-bottom: 1.5px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .pomo-mode button.active { color: var(--highlight); border-bottom-color: var(--highlight); }
+
+    .pomo-timer {
+      font-size: 6rem;
+      font-weight: 900;
+      color: var(--highlight);
+      letter-spacing: 0.05em;
+      line-height: 1;
+      font-family: var(--font);
+      margin-bottom: 36px;
+    }
+
+    .pomo-controls { display: flex; gap: 16px; align-items: center; }
+
+    .pomo-start {
+      background: none;
+      border: 1.5px solid var(--accent);
+      border-radius: var(--radius);
+      color: var(--accent);
+      font-family: var(--font); font-size: 0.82rem; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      padding: 10px 32px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .pomo-start:hover { background: var(--accent); color: var(--bg); }
+
+    .pomo-reset {
+      background: none; border: none;
+      color: var(--muted); font-size: 0.78rem; font-weight: 700;
+      cursor: pointer; letter-spacing: 0.08em;
+      transition: color 0.15s;
+    }
+    .pomo-reset:hover { color: var(--text); }
+
+    .pomo-cycles {
+      margin-top: 28px;
+      display: flex; gap: 8px;
+    }
+    .pomo-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      border: 1.5px solid var(--muted);
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .pomo-dot.done { background: var(--highlight); border-color: var(--highlight); }
+  </style>
+</head>
+<body>
+
+<header>
+  <!-- minimalist torii / temple gate -->
+  <svg class="temple-icon" width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- curved top rail -->
+    <path d="M2 10 Q19 4 36 10" stroke="#f0c880" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+    <!-- straight second rail -->
+    <line x1="5" y1="15" x2="33" y2="15" stroke="#f0c880" stroke-width="1.6" stroke-linecap="round"/>
+    <!-- left pillar -->
+    <line x1="10" y1="15" x2="10" y2="36" stroke="#f0c880" stroke-width="2" stroke-linecap="round"/>
+    <!-- right pillar -->
+    <line x1="28" y1="15" x2="28" y2="36" stroke="#f0c880" stroke-width="2" stroke-linecap="round"/>
+    <!-- center hanging ornament -->
+    <circle cx="19" cy="21" r="2.2" fill="none" stroke="#f0c880" stroke-width="1.2"/>
+    <line x1="19" y1="15" x2="19" y2="18.8" stroke="#f0c880" stroke-width="1" stroke-linecap="round"/>
+  </svg>
+  <h1>Monk Planner</h1>
+  <span id="date-label"></span>
+  <button class="theme-btn" id="theme-btn" title="Tema değiştir">☀</button>
+  <button class="pomo-btn" id="pomo-open-btn" title="Pomodoro">
+    <img src="monk.png" alt="Pomodoro" style="width:50px;height:50px;object-fit:contain;opacity:0.7;filter:sepia(1) saturate(0.6) brightness(0.9);">
+  </button>
+</header>
+
+<!-- ── POMODORO OVERLAY ── -->
+<div class="pomo-overlay" id="pomo-overlay">
+  <button class="pomo-close" id="pomo-close">✕</button>
+
+  <img class="pomo-monk" src="monk.png" alt="monk">
+
+  <div class="pomo-mode">
+    <button id="pomo-work-btn" class="active">Çalışma · 25dk</button>
+    <button id="pomo-break-btn">Mola · 5dk</button>
+    <button id="pomo-long-btn">Uzun Mola · 15dk</button>
+  </div>
+
+  <div class="pomo-timer" id="pomo-timer">25:00</div>
+
+  <div class="pomo-controls">
+    <button class="pomo-reset" id="pomo-reset">Sıfırla</button>
+    <button class="pomo-start" id="pomo-start">Başla</button>
+  </div>
+
+  <div class="pomo-cycles" id="pomo-cycles">
+    <div class="pomo-dot"></div>
+    <div class="pomo-dot"></div>
+    <div class="pomo-dot"></div>
+    <div class="pomo-dot"></div>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- ── LEFT: title list ── -->
+  <div class="sidebar-left">
+    <div class="sidebar-left-top">
+      <button class="new-title-btn" id="new-title-btn">+ Yeni Başlık</button>
+    </div>
+    <div class="title-list" id="title-list"></div>
+  </div>
+
+  <!-- ── MAIN: active section ── -->
+  <main>
+    <div class="main-inner" id="main-inner">
+      <div class="empty-state" id="empty-state">
+        <div class="big">☯</div>
+        <div>Bir başlık seç veya yeni başlık oluştur</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ── RIGHT: habit tracker ── -->
+  <div class="sidebar-right">
+    <h2>Habit Tracker</h2>
+
+    <div class="habit-form">
+      <input id="habit-input" type="text" placeholder="yeni alışkanlık…" maxlength="28" />
+      <button id="habit-add-btn" title="Ekle">+</button>
+    </div>
+
+    <div class="week-header" id="week-header"></div>
+    <div class="habits-list" id="habits-list"></div>
+
+    <div class="sb-divider"></div>
+
+    <!-- Stats -->
+    <h2>İstatistik</h2>
+    <div class="stats-panel" id="stats-panel">
+      <div class="stat-row"><span>Bugün tamamlanan</span><span class="stat-val" id="stat-today">0</span></div>
+      <div class="stat-row"><span>Toplam görev</span><span class="stat-val" id="stat-total">0</span></div>
+      <div class="stat-row"><span>En uzun seri</span><span class="stat-val" id="stat-streak">0 gün</span></div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+// ── Helpers ────────────────────────────────────────────
+function uid() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
+
+function formatDate(iso) {
+  if (!iso) return { label: '—', cls: 'past' };
+  const d    = new Date(iso);
+  const now  = new Date();
+  const diff = Math.floor((new Date(now).setHours(0,0,0,0) - new Date(d).setHours(0,0,0,0)) / 86400000);
+  const time = d.toLocaleTimeString('tr-TR', { hour:'2-digit', minute:'2-digit' });
+  if (diff === 0) return { label: 'Bugün ' + time, cls: 'today' };
+  if (diff === 1) return { label: 'Dün '   + time, cls: 'past'  };
+  return {
+    label: d.toLocaleDateString('tr-TR', { day:'numeric', month:'short', year: diff > 300 ? 'numeric' : undefined }) + ' ' + time,
+    cls: 'past'
+  };
+}
+
+const DAYS = ['Pt','Sa','Ça','Pe','Cu','Ct','Pz'];
+
+function weekKeys() {
+  const now = new Date();
+  const mon = new Date(now);
+  mon.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(mon);
+    d.setDate(mon.getDate() + i);
+    return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  });
+}
+
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+// ── State ──────────────────────────────────────────────
+function loadState() {
+  try { const r = localStorage.getItem('monk-v2'); if (r) return JSON.parse(r); } catch(_) {}
+  return { sections: [], habits: [], activeId: null };
+}
+function saveState() { localStorage.setItem('monk-v2', JSON.stringify(state)); }
+
+let state = loadState();
+
+// ── Date label ─────────────────────────────────────────
+document.getElementById('date-label').textContent =
+  new Date().toLocaleDateString('tr-TR', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+// ── Week header ────────────────────────────────────────
+(function() {
+  const wh = document.getElementById('week-header');
+  DAYS.forEach(d => { const s = document.createElement('span'); s.textContent = d; wh.appendChild(s); });
+})();
+
+// ── Sidebar drag state ─────────────────────────────────
+let sidebarDrag = null; // dragged section id
+
+function sfFindAndRemove(sections, id) {
+  for (let i = 0; i < sections.length; i++) {
+    if (sections[i].id === id) return sections.splice(i, 1)[0];
+    if (sections[i].type === 'folder') {
+      const f = sfFindAndRemove(sections[i].items, id);
+      if (f) return f;
+    }
+  }
+  return null;
+}
+
+// ── Render title list (with folder support) ────────────
+function renderTitleList() {
+  const list = document.getElementById('title-list');
+  list.innerHTML = '';
+  renderSidebarItems(state.sections, list);
+}
+
+function renderSidebarItems(items, container) {
+  items.forEach(item => {
+    if (item.type === 'folder') {
+      container.appendChild(makeSidebarFolder(item));
+    } else {
+      container.appendChild(makeSidebarItem(item));
+    }
+  });
+}
+
+function makeSidebarItem(sec) {
+  const item = document.createElement('div');
+  item.className = 'title-item' + (sec.id === state.activeId ? ' active' : '');
+  item.draggable = true;
+  item.dataset.id = sec.id;
+
+  const icon = document.createElement('span');
+  icon.className = 'title-item-icon';
+  icon.textContent = '◈';
+
+  const name = document.createElement('span');
+  name.className = 'title-item-name';
+  name.textContent = sec.title || 'İsimsiz';
+
+  const del = document.createElement('button');
+  del.className = 'title-item-del';
+  del.textContent = '✕';
+  del.onclick = e => {
+    e.stopPropagation();
+    sfFindAndRemove(state.sections, sec.id);
+    if (state.activeId === sec.id) state.activeId = null;
+    saveState(); renderTitleList(); renderMain();
+  };
+
+  item.appendChild(icon);
+  item.appendChild(name);
+  item.appendChild(del);
+  item.onclick = () => { state.activeId = sec.id; saveState(); renderTitleList(); renderMain(); };
+
+  // drag
+  item.addEventListener('dragstart', e => {
+    sidebarDrag = sec.id;
+    item.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  item.addEventListener('dragend', () => {
+    item.classList.remove('dragging');
+    sidebarDrag = null;
+    document.querySelectorAll('.title-item.drag-over, .sf-folder-header.drag-over')
+      .forEach(el => el.classList.remove('drag-over'));
+  });
+  item.addEventListener('dragover', e => {
+    e.preventDefault(); e.stopPropagation();
+    if (sidebarDrag && sidebarDrag !== sec.id) item.classList.add('drag-over');
+  });
+  item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+  item.addEventListener('drop', e => {
+    e.preventDefault(); e.stopPropagation();
+    item.classList.remove('drag-over');
+    if (!sidebarDrag || sidebarDrag === sec.id) return;
+    const moved = sfFindAndRemove(state.sections, sidebarDrag);
+    if (!moved) return;
+    // wrap both into new folder
+    const idx = state.sections.indexOf(sec);
+    const folder = { id: uid(), type: 'folder', name: '', collapsed: false, items: [sec, moved] };
+    // sec may still be in state.sections if it wasn't the dragged one — remove it first
+    const secIdx = state.sections.indexOf(sec);
+    if (secIdx !== -1) state.sections.splice(secIdx, 1, folder);
+    else state.sections.splice(Math.max(0, idx), 0, folder);
+    sidebarDrag = null;
+    saveState(); renderTitleList();
+  });
+
+  return item;
+}
+
+function makeSidebarFolder(folder) {
+  const wrap = document.createElement('div');
+  wrap.className = 'sf-folder';
+
+  const hdr = document.createElement('div');
+  hdr.className = 'sf-folder-header';
+
+  const arrow = document.createElement('span');
+  arrow.className = 'sf-arrow' + (folder.collapsed ? '' : ' open');
+  arrow.textContent = '▶';
+
+  const nameInp = document.createElement('input');
+  nameInp.className = 'sf-folder-name';
+  nameInp.type = 'text';
+  nameInp.placeholder = 'Klasör…';
+  nameInp.value = folder.name || '';
+  nameInp.onclick = e => e.stopPropagation();
+  nameInp.oninput = () => { folder.name = nameInp.value; saveState(); };
+
+  const count = document.createElement('span');
+  count.className = 'sf-folder-count';
+  count.textContent = (folder.items || []).length;
+
+  const del = document.createElement('button');
+  del.className = 'sf-folder-del';
+  del.textContent = '✕';
+  del.title = 'Klasörü çöz';
+  del.onclick = e => {
+    e.stopPropagation();
+    const idx = state.sections.indexOf(folder);
+    state.sections.splice(idx, 1, ...(folder.items || []));
+    saveState(); renderTitleList(); renderMain();
+  };
+
+  hdr.appendChild(arrow);
+  hdr.appendChild(nameInp);
+  hdr.appendChild(count);
+  hdr.appendChild(del);
+  hdr.onclick = () => {
+    folder.collapsed = !folder.collapsed;
+    saveState();
+    arrow.className = 'sf-arrow' + (folder.collapsed ? '' : ' open');
+    body.className = 'sf-folder-body' + (folder.collapsed ? ' hidden' : '');
+  };
+
+  // drop section INTO folder
+  hdr.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); hdr.classList.add('drag-over'); });
+  hdr.addEventListener('dragleave', () => hdr.classList.remove('drag-over'));
+  hdr.addEventListener('drop', e => {
+    e.preventDefault(); e.stopPropagation();
+    hdr.classList.remove('drag-over');
+    if (!sidebarDrag) return;
+    const moved = sfFindAndRemove(state.sections, sidebarDrag);
+    if (!moved || moved.id === folder.id) return;
+    folder.items = folder.items || [];
+    folder.items.push(moved);
+    sidebarDrag = null;
+    saveState(); renderTitleList();
+  });
+
+  const body = document.createElement('div');
+  body.className = 'sf-folder-body' + (folder.collapsed ? ' hidden' : '');
+  renderSidebarItems(folder.items || [], body);
+
+  wrap.appendChild(hdr);
+  wrap.appendChild(body);
+  return wrap;
+}
+
+// ── Render main content ────────────────────────────────
+function renderMain() {
+  const container = document.getElementById('main-inner');
+  container.innerHTML = '';
+
+  // find active section anywhere (including inside folders)
+  function findSec(items) {
+    for (const it of items) {
+      if (it.type === 'folder') { const f = findSec(it.items || []); if (f) return f; }
+      else if (it.id === state.activeId) return it;
+    }
+    return null;
+  }
+  const sec = findSec(state.sections);
+
+  if (!sec) {
+    const emp = document.createElement('div');
+    emp.className = 'empty-state';
+    emp.innerHTML = '<div class="big">☯</div><div>Bir başlık seç veya yeni başlık oluştur</div>';
+    container.appendChild(emp);
+    return;
+  }
+
+  const titleRow = document.createElement('div');
+  titleRow.className = 'title-row';
+
+  const titleEl = document.createElement('div');
+  titleEl.className = 'active-title';
+  titleEl.contentEditable = 'true';
+  titleEl.spellcheck = false;
+  titleEl.textContent = sec.title || '';
+  titleEl.style.cursor = 'text';
+  titleEl.oninput = () => {
+    sec.title = titleEl.textContent.trim();
+    saveState();
+    document.querySelectorAll('.title-item.active .title-item-name')
+      .forEach(el => el.textContent = sec.title || 'İsimsiz');
+  };
+
+  if (!sec.createdAt) sec.createdAt = new Date().toISOString();
+  const createdLabel = document.createElement('span');
+  createdLabel.className = 'title-created-date';
+  createdLabel.textContent = formatDate(sec.createdAt).label;
+
+  titleRow.appendChild(titleEl);
+  titleRow.appendChild(createdLabel);
+  container.appendChild(titleRow);
+
+  if (!sec.todos) sec.todos = [];
+  const todoList = document.createElement('div');
+  todoList.className = 'todo-list';
+  todoList.id = 'todo-list';
+  sec.todos.forEach((todo, ti) => todoList.appendChild(makeTodoEl(sec, todo, ti)));
+  container.appendChild(todoList);
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'add-todo-btn';
+  addBtn.textContent = '+ Görev ekle';
+  addBtn.onclick = () => {
+    sec.todos.push({ id: uid(), text: '', done: false, completedAt: null });
+    saveState(); renderMain();
+    setTimeout(() => {
+      const inputs = document.querySelectorAll('#todo-list .todo-text');
+      if (inputs.length) inputs[inputs.length - 1].focus();
+    }, 0);
+  };
+  container.appendChild(addBtn);
+
+  // Free-write
+  const fwLabel = document.createElement('div');
+  fwLabel.className = 'freewrite-label';
+  fwLabel.textContent = 'Notlar';
+  container.appendChild(fwLabel);
+
+  const fw = document.createElement('textarea');
+  fw.className = 'freewrite';
+  fw.placeholder = 'Serbest yaz…';
+  fw.value = sec.notes || '';
+  fw.oninput = () => { sec.notes = fw.value; saveState(); };
+  container.appendChild(fw);
+
+  updateStats();
+}
+
+// ── Task element (sade, orijinal hali) ────────────────
+function makeTodoEl(sec, todo, ti) {
+  const row = document.createElement('div');
+  row.className = 'todo-item';
+
+  const check = document.createElement('div');
+  check.className = 'todo-check' + (todo.done ? ' checked' : '');
+
+  const dateTag = document.createElement('span');
+  dateTag.className = 'todo-date';
+  function refreshDateTag() {
+    if (todo.done && todo.completedAt) {
+      const fmt = formatDate(todo.completedAt);
+      dateTag.textContent = '✓ ' + fmt.label;
+      dateTag.className = 'todo-date ' + fmt.cls;
+      dateTag.style.display = '';
+    } else {
+      dateTag.style.display = 'none';
+    }
+  }
+  refreshDateTag();
+
+  check.onclick = () => {
+    todo.done = !todo.done;
+    todo.completedAt = todo.done ? new Date().toISOString() : null;
+    saveState();
+    check.className = 'todo-check' + (todo.done ? ' checked' : '');
+    inp.className = 'todo-text' + (todo.done ? ' done' : '');
+    refreshDateTag();
+    if (todo.done) {
+      playZenSound();
+    } else {
+      _streak = Math.max(0, _streak - 1);
+      clearTimeout(_streakTimer);
+      if (_streak > 0) _streakTimer = setTimeout(() => { _streak = 0; }, 3000);
+    }
+  };
+
+  const inp = document.createElement('input');
+  inp.className = 'todo-text' + (todo.done ? ' done' : '');
+  inp.type = 'text'; inp.placeholder = 'Görev…'; inp.value = todo.text || '';
+  inp.oninput = () => { todo.text = inp.value; saveState(); };
+
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      sec.todos.splice(ti + 1, 0, { id: uid(), text: '', done: false, completedAt: null });
+      saveState(); renderMain();
+      setTimeout(() => { const ins = document.querySelectorAll('#todo-list .todo-text'); if (ins[ti+1]) ins[ti+1].focus(); }, 0);
+    }
+    if (e.key === 'Backspace' && inp.value === '') {
+      e.preventDefault();
+      sec.todos.splice(ti, 1);
+      saveState(); renderMain();
+      setTimeout(() => { const ins = document.querySelectorAll('#todo-list .todo-text'); const t = ins[Math.max(0,ti-1)]; if(t) t.focus(); }, 0);
+    }
+  });
+
+  const del = document.createElement('button');
+  del.className = 'todo-del'; del.textContent = '✕';
+  del.onclick = () => { sec.todos.splice(ti, 1); saveState(); renderMain(); };
+
+  row.appendChild(check);
+  row.appendChild(inp);
+  row.appendChild(dateTag);
+  row.appendChild(del);
+  return row;
+}
+
+// ── Zen sounds (Web Audio API) ─────────────────────────
+// ── Streak sound system ────────────────────────────────
+// A major scale: A4=440 C#5=554 E5=659 A5=880 C#6=1109 E6=1319
+// Her seviye bir öncekinin sesini kapsar + yeni katman ekler.
+// 5. seviye ACE — sıfırlanır.
+
+let _audioCtx = null;
+let _streak = 0;
+let _streakTimer = null;
+
+function getCtx() {
+  if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (_audioCtx.state === 'suspended') _audioCtx.resume();
+  return _audioCtx;
+}
+
+// gong katmanı: inharmonik partiallerle derin vurmalı ses
+function gong(ctx, baseFreq, vol, startDelay, decay) {
+  const t = ctx.currentTime + startDelay;
+  // gong'un inharmonik partialleri (gerçek gong oranları)
+  const partials = [1, 1.52, 2.18, 2.89, 3.61];
+  const vols     = [1, 0.55, 0.30, 0.16, 0.08];
+  partials.forEach((ratio, i) => {
+    const osc = ctx.createOscillator();
+    const g   = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(baseFreq * ratio, t);
+    // hafif pitch düşüşü — gong'un doğal özelliği
+    osc.frequency.exponentialRampToValueAtTime(baseFreq * ratio * 0.985, t + decay);
+    g.gain.setValueAtTime(vol * vols[i], t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + decay);
+    osc.connect(g); g.connect(ctx.destination);
+    osc.start(t); osc.stop(t + decay + 0.05);
+  });
+  // tok darbe gürültüsü (tokmaklama anı)
+  const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * 0.04), ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++)
+    d[i] = (Math.random()*2-1) * Math.exp(-i / (ctx.sampleRate * 0.003));
+  const src = ctx.createBufferSource();
+  const flt = ctx.createBiquadFilter();
+  const tg  = ctx.createGain();
+  flt.type = 'bandpass'; flt.frequency.value = baseFreq * 1.8; flt.Q.value = 3;
+  tg.gain.setValueAtTime(vol * 0.9, t);
+  tg.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+  src.buffer = buf;
+  src.connect(flt); flt.connect(tg); tg.connect(ctx.destination);
+  src.start(t);
+}
+
+const streakSounds = [
+  // ── 1 ── tek gong vuruşu — kısa, net
+  function(ctx) {
+    gong(ctx, 110, 0.42, 0, 0.55);
+  },
+  // ── 2 ── küçük + büyük gong
+  function(ctx) {
+    gong(ctx, 110, 0.40, 0,    0.55);
+    gong(ctx, 165, 0.44, 0.22, 0.70);
+  },
+  // ── 3 ── üç gong yükselen
+  function(ctx) {
+    gong(ctx, 110, 0.38, 0,    0.55);
+    gong(ctx, 165, 0.42, 0.20, 0.68);
+    gong(ctx, 220, 0.46, 0.42, 0.82);
+  },
+  // ── 4 ── derin bas + üç gong akoru
+  function(ctx) {
+    gong(ctx,  55, 0.50, 0,    0.70);   // derin bas vuruş
+    gong(ctx, 110, 0.38, 0.18, 0.60);
+    gong(ctx, 165, 0.42, 0.36, 0.72);
+    gong(ctx, 220, 0.46, 0.54, 0.88);
+  },
+  // ── 5 ── TAM ÇALIM: bas bomba + yükselen gong kaskadı
+  function(ctx) {
+    gong(ctx,  55, 0.55, 0,    0.90);   // en derin bas
+    gong(ctx,  82, 0.48, 0.08, 0.80);
+    gong(ctx, 110, 0.44, 0.22, 0.75);
+    gong(ctx, 147, 0.44, 0.36, 0.80);
+    gong(ctx, 165, 0.46, 0.50, 0.85);
+    gong(ctx, 220, 0.50, 0.65, 0.95);
+    gong(ctx, 275, 0.46, 0.80, 0.90);
+    // final: tüm gonglar eş zamanlı
+    gong(ctx,  55, 0.35, 1.05, 1.10);
+    gong(ctx, 110, 0.35, 1.05, 1.10);
+    gong(ctx, 165, 0.35, 1.05, 1.10);
+    gong(ctx, 220, 0.35, 1.05, 1.10);
+  },
+];
+
+// ── Habit tracker — artan çan streak sistemi ──────────
+let _habitStreak = 0;
+let _habitStreakTimer = null;
+
+// tek çan notası yardımcısı
+function bell(ctx, freq, vol, startDelay, decay, type = 'sine') {
+  const t = ctx.currentTime + startDelay;
+  const osc = ctx.createOscillator();
+  const g   = ctx.createGain();
+  osc.type = type; osc.frequency.value = freq;
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + decay);
+  osc.connect(g); g.connect(ctx.destination);
+  osc.start(t); osc.stop(t + decay + 0.04);
+}
+
+const habitStreakSounds = [
+  // 1 — tek yumuşak çan
+  function(ctx) {
+    bell(ctx, 1047, 0.22, 0,    0.40);
+    bell(ctx, 2093, 0.08, 0,    0.25);
+  },
+  // 2 — iki çan yükselen (C6 → E6)
+  function(ctx) {
+    bell(ctx, 1047, 0.22, 0,    0.38);
+    bell(ctx, 2093, 0.08, 0,    0.24);
+    bell(ctx, 1319, 0.24, 0.20, 0.45);
+    bell(ctx, 2637, 0.08, 0.20, 0.28);
+  },
+  // 3 — üç çan artan (C6 → E6 → G6)
+  function(ctx) {
+    bell(ctx, 1047, 0.22, 0,    0.36);
+    bell(ctx, 1319, 0.24, 0.18, 0.42);
+    bell(ctx, 1568, 0.26, 0.38, 0.50);
+    bell(ctx, 3136, 0.08, 0.38, 0.28);
+  },
+  // 4 — dört çan + bas destek
+  function(ctx) {
+    bell(ctx,  523, 0.18, 0,    0.45);   // bas C5
+    bell(ctx, 1047, 0.22, 0.10, 0.40);
+    bell(ctx, 1319, 0.24, 0.26, 0.45);
+    bell(ctx, 1568, 0.26, 0.42, 0.50);
+    bell(ctx, 2093, 0.22, 0.58, 0.55);
+    bell(ctx, 4186, 0.08, 0.58, 0.30);
+  },
+  // 5 — TAM ÇALIM: kaskad + akord patlaması
+  function(ctx) {
+    bell(ctx,  523, 0.18, 0,    0.42);
+    bell(ctx, 1047, 0.22, 0.12, 0.40);
+    bell(ctx, 1319, 0.24, 0.24, 0.45);
+    bell(ctx, 1568, 0.26, 0.36, 0.50);
+    bell(ctx, 2093, 0.24, 0.48, 0.55);
+    bell(ctx, 2637, 0.22, 0.60, 0.60);
+    // final akord
+    [523, 1047, 1319, 1568, 2093].forEach(f => bell(ctx, f, 0.18, 0.82, 0.75));
+    bell(ctx, 4186, 0.12, 0.82, 0.50);
+  },
+];
+
+function playHabitBell(isChecking) {
+  try {
+    const ctx = getCtx();
+    if (isChecking) {
+      if (_habitStreak < 5) _habitStreak++;
+      clearTimeout(_habitStreakTimer);
+      _habitStreakTimer = setTimeout(() => { _habitStreak = 0; }, 3000);
+      habitStreakSounds[_habitStreak - 1](ctx);
+    } else {
+      _habitStreak = Math.max(0, _habitStreak - 1);
+      clearTimeout(_habitStreakTimer);
+      if (_habitStreak > 0) _habitStreakTimer = setTimeout(() => { _habitStreak = 0; }, 3000);
+    }
+  } catch(e) {}
+}
+
+function playZenSound() {
+  try {
+    const ctx = getCtx();
+
+    // 5'ten sonra 5'te kalır
+    if (_streak < 5) _streak++;
+
+    // zamanlayıcı: 3s içinde yeni tik gelmezse sıfırla
+    clearTimeout(_streakTimer);
+    _streakTimer = setTimeout(() => { _streak = 0; }, 3000);
+
+    streakSounds[_streak - 1](ctx);
+  } catch(e) {}
+}
+
+// ── New title ──────────────────────────────────────────
+document.getElementById('new-title-btn').onclick = () => {
+  const sec = { id: uid(), title: '', todos: [], createdAt: new Date().toISOString() };
+  state.sections.push(sec);
+  state.activeId = sec.id;
+  saveState();
+  renderTitleList();
+  renderMain();
+  // focus the title
+  setTimeout(() => {
+    const t = document.querySelector('.active-title');
+    if (t) { t.focus(); const r = document.createRange(); r.selectNodeContents(t); r.collapse(false); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); }
+  }, 0);
+};
+
+// ── Habits ────────────────────────────────────────────
+function renderHabits() {
+  const container = document.getElementById('habits-list');
+  container.innerHTML = '';
+  const wk = weekKeys();
+  const today = todayKey();
+
+  state.habits.forEach((habit, hi) => {
+    if (!habit.log) habit.log = {};
+
+    const item = document.createElement('div');
+    item.className = 'habit-item';
+
+    const hdr = document.createElement('div');
+    hdr.className = 'habit-header';
+
+    const name = document.createElement('span');
+    name.className = 'habit-name';
+    name.textContent = habit.name;
+
+    const del = document.createElement('button');
+    del.className = 'habit-del';
+    del.textContent = '✕';
+    del.onclick = () => { state.habits.splice(hi, 1); saveState(); renderHabits(); };
+
+    hdr.appendChild(name);
+    hdr.appendChild(del);
+
+    const days = document.createElement('div');
+    days.className = 'habit-days';
+
+    wk.forEach(key => {
+      const dot = document.createElement('div');
+      dot.className = 'day-dot' + (habit.log[key] ? ' done' : '') + (key === today ? ' today' : '');
+      dot.title = key === today ? 'Bugün' : '';
+      dot.onclick = () => {
+        habit.log[key] = !habit.log[key];
+        saveState();
+        renderHabits();
+        updateStats();
+        playHabitBell(habit.log[key]);
+      };
+      days.appendChild(dot);
+    });
+
+    item.appendChild(hdr);
+    item.appendChild(days);
+    container.appendChild(item);
+  });
+}
+
+document.getElementById('habit-add-btn').onclick = addHabit;
+document.getElementById('habit-input').addEventListener('keydown', e => { if (e.key === 'Enter') addHabit(); });
+
+function addHabit() {
+  const inp = document.getElementById('habit-input');
+  const name = inp.value.trim();
+  if (!name) return;
+  state.habits.push({ id: uid(), name, log: {} });
+  inp.value = '';
+  saveState();
+  renderHabits();
+}
+
+// ── Pomodoro ───────────────────────────────────────────
+(function() {
+  const MODES = { work: 25*60, break: 5*60, long: 15*60 };
+  let mode     = 'work';
+  let total    = MODES.work;
+  let left     = total;
+  let running  = false;
+  let interval = null;
+  let cycles   = 0;
+
+  const overlay   = document.getElementById('pomo-overlay');
+  const timerEl   = document.getElementById('pomo-timer');
+  const startBtn  = document.getElementById('pomo-start');
+  const resetBtn  = document.getElementById('pomo-reset');
+  const workBtn   = document.getElementById('pomo-work-btn');
+  const breakBtn  = document.getElementById('pomo-break-btn');
+  const longBtn   = document.getElementById('pomo-long-btn');
+  const cycleDots = document.querySelectorAll('.pomo-dot');
+
+  document.getElementById('pomo-open-btn').onclick = () => overlay.classList.add('open');
+  document.getElementById('pomo-close').onclick    = () => { overlay.classList.remove('open'); pause(); };
+
+  function fmt(s) {
+    const m = String(Math.floor(s / 60)).padStart(2, '0');
+    const sec = String(s % 60).padStart(2, '0');
+    return m + ':' + sec;
+  }
+
+  function render() {
+    timerEl.textContent = fmt(left);
+    document.title = running ? fmt(left) + ' — Monk Planner' : 'Monk Planner';
+    startBtn.textContent = running ? 'Duraklat' : (left < total ? 'Devam' : 'Başla');
+    cycleDots.forEach((d, i) => d.classList.toggle('done', i < cycles % 4));
+  }
+
+  function tick() {
+    if (left <= 0) {
+      clearInterval(interval); running = false;
+      playZenSound();
+      if (mode === 'work') { cycles++; setMode(cycles % 4 === 0 ? 'long' : 'break'); }
+      else setMode('work');
+      render(); return;
+    }
+    left--; render();
+  }
+
+  function pause() { clearInterval(interval); running = false; render(); }
+
+  function setMode(m) {
+    pause();
+    mode = m; total = MODES[m]; left = total;
+    [workBtn, breakBtn, longBtn].forEach(b => b.classList.remove('active'));
+    ({ work: workBtn, break: breakBtn, long: longBtn })[m].classList.add('active');
+    render();
+  }
+
+  startBtn.onclick = () => {
+    if (running) { pause(); return; }
+    running = true;
+    interval = setInterval(tick, 1000);
+    render();
+  };
+
+  resetBtn.onclick = () => { setMode(mode); };
+  workBtn.onclick  = () => setMode('work');
+  breakBtn.onclick = () => setMode('break');
+  longBtn.onclick  = () => setMode('long');
+
+  render();
+})();
+
+// ── Theme toggle ───────────────────────────────────────
+(function() {
+  const btn = document.getElementById('theme-btn');
+  if (localStorage.getItem('monk-theme') === 'light') {
+    document.body.classList.add('light'); btn.textContent = '☾';
+  }
+  btn.onclick = () => {
+    const isLight = document.body.classList.toggle('light');
+    btn.textContent = isLight ? '☾' : '☀';
+    localStorage.setItem('monk-theme', isLight ? 'light' : 'dark');
+  };
+})();
+
+// ── Stats ───────────────────────────────────────────────
+function updateStats() {
+  const todayISO = new Date().toDateString();
+  let todayDone = 0, totalDone = 0;
+
+  function countSections(items) {
+    items.forEach(it => {
+      if (it.type === 'folder') { countSections(it.items || []); return; }
+      (it.todos || []).forEach(t => {
+        if (t.done) {
+          totalDone++;
+          if (t.completedAt && new Date(t.completedAt).toDateString() === todayISO) todayDone++;
+        }
+      });
+    });
+  }
+  countSections(state.sections);
+
+  // longest habit streak
+  let maxStreak = 0;
+  state.habits.forEach(h => {
+    const wk = weekKeys();
+    let s = 0;
+    wk.forEach(k => { if ((h.log || {})[k]) s++; else s = 0; });
+    maxStreak = Math.max(maxStreak, s);
+  });
+
+  document.getElementById('stat-today').textContent = todayDone;
+  document.getElementById('stat-total').textContent = totalDone;
+  document.getElementById('stat-streak').textContent = maxStreak + ' gün';
+}
+
+
+// ── Init ───────────────────────────────────────────────
+renderTitleList();
+renderMain();
+renderHabits();
+updateStats();
+</script>
+</body>
+</html>
